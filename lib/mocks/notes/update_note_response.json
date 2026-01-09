@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "message": "Note updated successfully",
+  "data": {
+    "id": "{{noteId}}",
+    "title": "{{title}}",
+    "description": "{{description}}",
+    "category": "{{category}}",
+    "priority": "{{priority}}",
+    "isCompleted": "{{isCompleted}}",
+    "createdAt": "{{createdAt}}",
+    "updatedAt": "{{now}}",
+    "userId": "user_123456789"
+  }
+}

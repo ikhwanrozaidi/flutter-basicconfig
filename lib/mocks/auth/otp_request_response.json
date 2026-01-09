@@ -1,0 +1,9 @@
+{
+  "statusCode": 200,
+  "message": "OTP sent successfully to your phone",
+  "data": {
+    "message": "OTP sent successfully to your phone",
+    "otpId": "otp_987654321",
+    "expiresIn": 300
+  }
+}

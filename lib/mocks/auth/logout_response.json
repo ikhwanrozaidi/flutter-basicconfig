@@ -1,0 +1,7 @@
+{
+  "statusCode": 200,
+  "message": "Logged out successfully",
+  "data": {
+    "message": "Logged out successfully"
+  }
+}

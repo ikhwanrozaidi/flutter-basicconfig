@@ -1,0 +1,23 @@
+{
+  "statusCode": 200,
+  "message": "Login successful",
+  "data": {
+    "user": {
+      "id": "user_123456789",
+      "email": "demo@example.com",
+      "username": "demouser",
+      "fullName": "Demo User",
+      "phoneNumber": "+60123456789",
+      "profilePicture": "https://ui-avatars.com/api/?name=Demo+User&background=0D8ABC&color=fff",
+      "isEmailVerified": true,
+      "isPhoneVerified": true,
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-10T00:00:00.000Z"
+    },
+    "accessToken": "mock_access_token_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+    "refreshToken": "mock_refresh_token_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+    "tokenType": "Bearer",
+    "expiresIn": 300,
+    "refreshExpiresIn": 86400
+  }
+}

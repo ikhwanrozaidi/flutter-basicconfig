@@ -1,0 +1,17 @@
+{
+  "success": true,
+  "message": "Note retrieved successfully",
+  "data": {
+    "id": "note_001",
+    "title": "Meeting Notes",
+    "description": "Discussed project timeline and deliverables for Q1 2024",
+    "category": "Work",
+    "priority": "high",
+    "isCompleted": false,
+    "tags": ["meeting", "project", "timeline"],
+    "attachments": [],
+    "createdAt": "2024-01-05T10:30:00.000Z",
+    "updatedAt": "2024-01-05T10:30:00.000Z",
+    "userId": "user_123456789"
+  }
+}

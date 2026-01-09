@@ -1,0 +1,44 @@
+{
+  "success": true,
+  "message": "Notes retrieved successfully",
+  "data": {
+    "notes": [
+      {
+        "id": "note_001",
+        "title": "Meeting Notes",
+        "description": "Discussed project timeline and deliverables for Q1 2024",
+        "category": "Work",
+        "priority": "high",
+        "isCompleted": false,
+        "createdAt": "2024-01-05T10:30:00.000Z",
+        "updatedAt": "2024-01-05T10:30:00.000Z",
+        "userId": "user_123456789"
+      },
+      {
+        "id": "note_002",
+        "title": "Shopping List",
+        "description": "Groceries: Milk, Eggs, Bread, Butter",
+        "category": "Personal",
+        "priority": "medium",
+        "isCompleted": false,
+        "createdAt": "2024-01-06T14:20:00.000Z",
+        "updatedAt": "2024-01-06T14:20:00.000Z",
+        "userId": "user_123456789"
+      },
+      {
+        "id": "note_003",
+        "title": "Book Recommendations",
+        "description": "Clean Architecture by Robert Martin, Domain Driven Design",
+        "category": "Reading",
+        "priority": "low",
+        "isCompleted": true,
+        "createdAt": "2024-01-03T09:15:00.000Z",
+        "updatedAt": "2024-01-07T16:45:00.000Z",
+        "userId": "user_123456789"
+      }
+    ],
+    "total": 3,
+    "page": 1,
+    "limit": 10
+  }
+}

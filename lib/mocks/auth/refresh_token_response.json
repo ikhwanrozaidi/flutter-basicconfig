@@ -1,0 +1,11 @@
+{
+  "statusCode": 200,
+  "message": "Token refreshed successfully",
+  "data": {
+    "accessToken": "mock_new_access_token_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+    "refreshToken": "mock_new_refresh_token_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+    "tokenType": "Bearer",
+    "expiresIn": 300,
+    "refreshExpiresIn": 86400
+  }
+}

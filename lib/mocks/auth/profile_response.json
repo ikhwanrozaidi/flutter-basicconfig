@@ -1,0 +1,16 @@
+{
+  "statusCode": 200,
+  "message": "Profile retrieved successfully",
+  "data": {
+    "id": "user_123456789",
+    "email": "demo@example.com",
+    "username": "demouser",
+    "fullName": "Demo User",
+    "phoneNumber": "+60123456789",
+    "profilePicture": "https://ui-avatars.com/api/?name=Demo+User&background=0D8ABC&color=fff",
+    "isEmailVerified": true,
+    "isPhoneVerified": true,
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-10T00:00:00.000Z"
+  }
+}
