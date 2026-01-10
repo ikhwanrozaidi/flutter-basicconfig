@@ -1,16 +1,21 @@
 // lib/core/network/auth_interceptor.dart
 
 import 'package:dio/dio.dart';
+import 'package:injectable/injectable.dart';
 import '../service/secure_storage_service.dart';
 
 /// Handles authentication token injection and automatic token refresh
+@lazySingleton
 class AuthInterceptor extends Interceptor {
   final Dio _dio;
   final SecureStorageService _secureStorage;
   bool _isRefreshing = false;
   final List<RequestOptions> _requestsQueue = [];
 
-  AuthInterceptor(this._dio, this._secureStorage);
+  AuthInterceptor(
+    this._dio,
+    this._secureStorage,
+  ); // ← Injectable will handle this
 
   @override
   void onRequest(

@@ -33,6 +33,7 @@ import '../../features/auth/domain/usecases/request_otp_usecase.dart' as _i29;
 import '../../features/auth/domain/usecases/verify_otp_usecase.dart' as _i503;
 import '../../features/auth/presentation/bloc/auth_bloc.dart' as _i797;
 import '../database/app_database.dart' as _i982;
+import '../network/auth_interceptor.dart' as _i908;
 import '../network/connectivity_service.dart' as _i491;
 import '../network/dio_client.dart' as _i667;
 import '../network/error_interceptor.dart' as _i1004;
@@ -52,8 +53,8 @@ extension GetItInjectableX on _i174.GetIt {
       environmentFilter,
     );
     final registerModule = _$RegisterModule();
-    gh.singleton<_i491.ConnectivityService>(() => _i491.ConnectivityService());
     gh.singleton<_i982.DatabaseService>(() => _i982.DatabaseService());
+    gh.singleton<_i491.ConnectivityService>(() => _i491.ConnectivityService());
     gh.lazySingleton<_i361.Dio>(() => registerModule.dio);
     gh.lazySingleton<_i895.Connectivity>(() => registerModule.connectivity);
     gh.lazySingleton<_i558.FlutterSecureStorage>(
@@ -67,6 +68,10 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i600.AuthLocalDataSourceImpl(gh<_i982.DatabaseService>()));
     gh.lazySingleton<_i142.SecureStorageService>(
         () => _i142.SecureStorageService(gh<_i558.FlutterSecureStorage>()));
+    gh.lazySingleton<_i908.AuthInterceptor>(() => _i908.AuthInterceptor(
+          gh<_i361.Dio>(),
+          gh<_i142.SecureStorageService>(),
+        ));
     gh.lazySingleton<_i932.NetworkInfo>(
         () => _i932.NetworkInfoImpl(gh<_i895.Connectivity>()));
     gh.factoryParam<_i667.DioClient, bool?, dynamic>((

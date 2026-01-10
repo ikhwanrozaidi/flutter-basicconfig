@@ -3,7 +3,7 @@
 ## Mock Mode
 
 Mock mode is automatically enabled in **development** flavor.
-```bash
+```bashR
 flutter run --flavor development -t lib/main_development.dart
 ```
 
@@ -42,7 +42,7 @@ When token expires, the app will automatically:
 
 ## Adding New Mock Endpoints
 
-1. Create JSON file in `lib/core/mocks/[feature]/`
+1. Create JSON file in `lib/mocks/[feature]/`
 2. Add to `pubspec.yaml` assets
 3. Update `MockInterceptor._getMockResponse()` with new endpoint handling
 

@@ -1,3 +1,5 @@
+// lib/mocks/mock_interceptor.dart
+
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
@@ -34,8 +36,9 @@ class MockInterceptor extends Interceptor {
     try {
       final mockResponse = await _getMockResponse(options);
       return handler.resolve(mockResponse);
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ MOCK ERROR: $e');
+      print('❌ STACK TRACE: $stackTrace');
       return handler.reject(
         DioException(
           requestOptions: options,
@@ -77,7 +80,7 @@ class MockInterceptor extends Interceptor {
       _loginTime = null;
       _requestCount = 0;
       return await _loadMockJson(
-        'lib/core/mocks/auth/logout_response.json',
+        'lib/mocks/auth/logout_response.json',
         options,
       );
     }
@@ -89,7 +92,7 @@ class MockInterceptor extends Interceptor {
         return await _createExpiredTokenResponse(options);
       }
       return await _loadMockJson(
-        'lib/core/mocks/auth/profile_response.json',
+        'lib/mocks/auth/profile_response.json',
         options,
       );
     }
@@ -99,7 +102,7 @@ class MockInterceptor extends Interceptor {
       _loginTime = DateTime.now();
       _requestCount = 0;
       return await _loadMockJson(
-        'lib/core/mocks/auth/refresh_token_response.json',
+        'lib/mocks/auth/refresh_token_response.json',
         options,
       );
     }
@@ -118,9 +121,32 @@ class MockInterceptor extends Interceptor {
 
   /// Handle login request
   Future<Response> _handleLogin(RequestOptions options) async {
-    final requestData = options.data as Map<String, dynamic>?;
-    final email = requestData?['email'] as String?;
-    final password = requestData?['password'] as String?;
+    // Extract email and password from request data
+    String? email;
+    String? password;
+
+    // Handle different data types (Map or Object)
+    final requestData = options.data;
+
+    if (requestData is Map<String, dynamic>) {
+      // Direct Map
+      email = requestData['email'] as String?;
+      password = requestData['password'] as String?;
+    } else if (requestData != null) {
+      // Object (Freezed model) - convert to JSON first
+      try {
+        final jsonData = requestData is String
+            ? json.decode(requestData)
+            : json.decode(json.encode(requestData));
+
+        if (jsonData is Map<String, dynamic>) {
+          email = jsonData['email'] as String?;
+          password = jsonData['password'] as String?;
+        }
+      } catch (e) {
+        print('❌ Failed to parse request data: $e');
+      }
+    }
 
     print('🎭 MOCK LOGIN: email=$email, password=$password');
 
@@ -128,10 +154,7 @@ class MockInterceptor extends Interceptor {
     if (email == mockEmail && password == mockPassword) {
       _loginTime = DateTime.now();
       _requestCount = 0;
-      return await _loadMockJson(
-        'lib/core/mocks/auth/auth_response.json',
-        options,
-      );
+      return await _loadMockJson('lib/mocks/auth/auth_response.json', options);
     } else {
       // Invalid credentials
       return Response(
@@ -148,15 +171,33 @@ class MockInterceptor extends Interceptor {
 
   /// Handle request OTP
   Future<Response> _handleRequestOtp(RequestOptions options) async {
-    final requestData = options.data as Map<String, dynamic>?;
-    final phoneNumber = requestData?['phoneNumber'] as String?;
+    String? phoneNumber;
+
+    // Handle different data types
+    final requestData = options.data;
+
+    if (requestData is Map<String, dynamic>) {
+      phoneNumber = requestData['phoneNumber'] as String?;
+    } else if (requestData != null) {
+      try {
+        final jsonData = requestData is String
+            ? json.decode(requestData)
+            : json.decode(json.encode(requestData));
+
+        if (jsonData is Map<String, dynamic>) {
+          phoneNumber = jsonData['phoneNumber'] as String?;
+        }
+      } catch (e) {
+        print('❌ Failed to parse request data: $e');
+      }
+    }
 
     print('🎭 MOCK REQUEST OTP: phoneNumber=$phoneNumber');
 
     // Accept any phone number for mock
     if (phoneNumber != null && phoneNumber.isNotEmpty) {
       return await _loadMockJson(
-        'lib/core/mocks/auth/otp_request_response.json',
+        'lib/mocks/auth/otp_request_response.json',
         options,
       );
     } else {
@@ -174,9 +215,29 @@ class MockInterceptor extends Interceptor {
 
   /// Handle verify OTP
   Future<Response> _handleVerifyOtp(RequestOptions options) async {
-    final requestData = options.data as Map<String, dynamic>?;
-    final phoneNumber = requestData?['phoneNumber'] as String?;
-    final otp = requestData?['otp'] as String?;
+    String? phoneNumber;
+    String? otp;
+
+    // Handle different data types
+    final requestData = options.data;
+
+    if (requestData is Map<String, dynamic>) {
+      phoneNumber = requestData['phoneNumber'] as String?;
+      otp = requestData['otp'] as String?;
+    } else if (requestData != null) {
+      try {
+        final jsonData = requestData is String
+            ? json.decode(requestData)
+            : json.decode(json.encode(requestData));
+
+        if (jsonData is Map<String, dynamic>) {
+          phoneNumber = jsonData['phoneNumber'] as String?;
+          otp = jsonData['otp'] as String?;
+        }
+      } catch (e) {
+        print('❌ Failed to parse request data: $e');
+      }
+    }
 
     print('🎭 MOCK VERIFY OTP: phoneNumber=$phoneNumber, otp=$otp');
 
@@ -185,7 +246,7 @@ class MockInterceptor extends Interceptor {
       _loginTime = DateTime.now();
       _requestCount = 0;
       return await _loadMockJson(
-        'lib/core/mocks/auth/otp_verify_response.json',
+        'lib/mocks/auth/otp_verify_response.json',
         options,
       );
     } else {
