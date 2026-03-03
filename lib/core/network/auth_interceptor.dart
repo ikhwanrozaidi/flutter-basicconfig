@@ -1,40 +1,37 @@
 // lib/core/network/auth_interceptor.dart
 
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
 import '../service/secure_storage_service.dart';
 
-/// Handles authentication token injection and automatic token refresh
 @lazySingleton
 class AuthInterceptor extends Interceptor {
   final Dio _dio;
   final SecureStorageService _secureStorage;
-  bool _isRefreshing = false;
-  final List<RequestOptions> _requestsQueue = [];
 
-  AuthInterceptor(
-    this._dio,
-    this._secureStorage,
-  ); // ← Injectable will handle this
+  // Refresh state management
+  bool _isRefreshing = false;
+  final List<_QueuedRequest> _requestsQueue = [];
+
+  // Callback to notify app of forced logout
+  void Function()? onForceLogout;
+
+  AuthInterceptor(this._dio, this._secureStorage);
 
   @override
   void onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    // Skip token for login/register/refresh endpoints
     if (_shouldSkipAuth(options.path)) {
       return handler.next(options);
     }
 
     try {
       final accessToken = await _secureStorage.getAccessToken();
-
       if (accessToken != null && accessToken.isNotEmpty) {
         options.headers['Authorization'] = 'Bearer $accessToken';
-        print('🔐 Access token added to request: ${options.path}');
-      } else {
-        print('⚠️ No access token available for: ${options.path}');
       }
     } catch (e) {
       print('❌ Error getting access token: $e');
@@ -45,51 +42,76 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
-    // Check if error is 401 (Unauthorized)
-    if (err.response?.statusCode == 401) {
-      print('🔄 401 Unauthorized - attempting token refresh');
+    // Only handle 401 Unauthorized
+    if (err.response?.statusCode != 401) {
+      return handler.next(err);
+    }
 
-      final errorData = err.response?.data;
-      final isTokenExpired =
-          errorData is Map &&
-          (errorData['errorCode'] == 'TOKEN_EXPIRED' ||
-              errorData['message']?.toString().toLowerCase().contains(
-                    'expired',
-                  ) ==
-                  true);
+    // Don't try to refresh if the refresh endpoint itself failed
+    if (err.requestOptions.path.contains('/auth/refresh')) {
+      print('❌ Refresh token itself is invalid — forcing logout');
+      await _forceLogout();
+      return handler.reject(err);
+    }
 
-      if (isTokenExpired) {
-        // Try to refresh the token
-        final newToken = await _refreshToken();
+    // Don't try to refresh for login/register failures
+    if (_shouldSkipAuth(err.requestOptions.path)) {
+      return handler.next(err);
+    }
 
-        if (newToken != null) {
-          // Retry the original request with new token
-          print('✅ Token refreshed successfully, retrying request');
-          final retryResponse = await _retryRequest(
-            err.requestOptions,
-            newToken,
-          );
-          return handler.resolve(retryResponse);
-        } else {
-          print('❌ Token refresh failed - user needs to login again');
-          // Token refresh failed - clear tokens and reject
-          await _secureStorage.clearTokens();
-          return handler.reject(err);
-        }
+    print('🔄 401 received — attempting token refresh');
+
+    // If already refreshing, queue this request
+    if (_isRefreshing) {
+      print(
+        '⏳ Refresh in progress — queuing request: ${err.requestOptions.path}',
+      );
+      final completer = Completer<Response>();
+      _requestsQueue.add(
+        _QueuedRequest(
+          requestOptions: err.requestOptions,
+          completer: completer,
+        ),
+      );
+
+      try {
+        final response = await completer.future;
+        return handler.resolve(response);
+      } catch (e) {
+        return handler.reject(
+          DioException(requestOptions: err.requestOptions, error: e),
+        );
       }
     }
 
-    // For other errors, pass through
-    handler.next(err);
+    // Attempt refresh
+    final newToken = await _refreshToken();
+
+    if (newToken != null) {
+      // Retry the original request
+      print('✅ Token refreshed — retrying original request');
+      try {
+        final response = await _retryRequest(err.requestOptions, newToken);
+        // Process queued requests with new token
+        _processQueue(newToken);
+        return handler.resolve(response);
+      } catch (retryError) {
+        _rejectQueue(retryError);
+        return handler.reject(
+          DioException(requestOptions: err.requestOptions, error: retryError),
+        );
+      }
+    } else {
+      // Refresh failed — force logout
+      print('❌ Token refresh failed — forcing logout');
+      _rejectQueue(err);
+      await _forceLogout();
+      return handler.reject(err);
+    }
   }
 
-  /// Refresh the access token using refresh token
   Future<String?> _refreshToken() async {
-    if (_isRefreshing) {
-      // Already refreshing, wait and return
-      print('⏳ Token refresh already in progress');
-      return null;
-    }
+    if (_isRefreshing) return null;
 
     try {
       _isRefreshing = true;
@@ -100,9 +122,9 @@ class AuthInterceptor extends Interceptor {
         return null;
       }
 
-      print('🔄 Attempting to refresh token...');
+      print('🔄 Calling refresh endpoint...');
 
-      // Create a new Dio instance to avoid interceptor loop
+      // Use a separate Dio instance to avoid interceptor loop
       final refreshDio = Dio(
         BaseOptions(
           baseUrl: _dio.options.baseUrl,
@@ -117,37 +139,30 @@ class AuthInterceptor extends Interceptor {
       );
 
       if (response.statusCode == 200) {
-        final data = response.data;
-
-        // Handle both direct data and wrapped response
-        final responseData = data['data'] ?? data;
-
+        final responseData = response.data['data'] ?? response.data;
         final newAccessToken = responseData['accessToken'] as String?;
         final newRefreshToken = responseData['refreshToken'] as String?;
 
         if (newAccessToken != null) {
-          // Save new tokens
           await _secureStorage.saveAccessToken(newAccessToken);
           if (newRefreshToken != null) {
             await _secureStorage.saveRefreshToken(newRefreshToken);
           }
-
-          print('✅ Token refresh successful');
+          print('✅ Tokens refreshed and saved');
           return newAccessToken;
         }
       }
 
-      print('❌ Token refresh failed - invalid response');
+      print('❌ Refresh response invalid');
       return null;
     } catch (e) {
-      print('❌ Token refresh error: $e');
+      print('❌ Refresh request failed: $e');
       return null;
     } finally {
       _isRefreshing = false;
     }
   }
 
-  /// Retry the original request with new token
   Future<Response> _retryRequest(
     RequestOptions requestOptions,
     String newToken,
@@ -165,16 +180,54 @@ class AuthInterceptor extends Interceptor {
     );
   }
 
-  /// Check if request should skip authentication
+  /// Retry all queued requests with the new token
+  void _processQueue(String newToken) {
+    print('🔄 Processing ${_requestsQueue.length} queued requests');
+    for (final queued in _requestsQueue) {
+      _retryRequest(queued.requestOptions, newToken)
+          .then((response) => queued.completer.complete(response))
+          .catchError((error) => queued.completer.completeError(error));
+    }
+    _requestsQueue.clear();
+  }
+
+  /// Reject all queued requests
+  void _rejectQueue(Object error) {
+    print('❌ Rejecting ${_requestsQueue.length} queued requests');
+    for (final queued in _requestsQueue) {
+      queued.completer.completeError(error);
+    }
+    _requestsQueue.clear();
+  }
+
+  /// Clear tokens and notify app to navigate to login
+  Future<void> _forceLogout() async {
+    await _secureStorage.clearTokens();
+    _requestsQueue.clear();
+    _isRefreshing = false;
+
+    // Notify the app layer
+    if (onForceLogout != null) {
+      print('🔓 Triggering force logout callback');
+      onForceLogout!();
+    }
+  }
+
   bool _shouldSkipAuth(String path) {
-    final skipPaths = [
+    const skipPaths = [
       '/auth/login',
       '/auth/register',
       '/auth/refresh',
       '/auth/request-otp',
       '/auth/verify-otp',
     ];
-
     return skipPaths.any((skipPath) => path.contains(skipPath));
   }
+}
+
+class _QueuedRequest {
+  final RequestOptions requestOptions;
+  final Completer<Response> completer;
+
+  _QueuedRequest({required this.requestOptions, required this.completer});
 }

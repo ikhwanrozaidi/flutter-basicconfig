@@ -33,7 +33,6 @@ class DioClient {
 
   /// Configure Dio with base options and interceptors
   void _configureDio() {
-    // ==================== BASE OPTIONS ====================
     _dio.options = BaseOptions(
       baseUrl: FlavorConfig.instance.apiBaseUrl,
       connectTimeout: const Duration(seconds: 30),
@@ -43,54 +42,11 @@ class DioClient {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-      // Follow redirects
       followRedirects: true,
       maxRedirects: 5,
-      // Validate status code
-      validateStatus: (status) {
-        // Accept all status codes so we can handle them in interceptors
-        return status != null && status < 500;
-      },
+      validateStatus: (status) => status != null && status < 500,
     );
-
-    // ==================== CLEAR EXISTING INTERCEPTORS ====================
-    // Important: Clear any existing interceptors to avoid duplicates
-    _dio.interceptors.clear();
-
-    // ==================== ADD INTERCEPTORS IN ORDER ====================
-    // ORDER MATTERS! Interceptors run in the order they're added
-
-    // 1. MOCK INTERCEPTOR (First - intercepts requests before they go out)
-    if (useMockData) {
-      print('🎭 Mock mode enabled - using mock data');
-      _dio.interceptors.add(MockInterceptor(useMockData: true));
-    }
-
-    // 2. AUTH INTERCEPTOR (Adds tokens to requests, handles refresh)
-    _dio.interceptors.add(AuthInterceptor(_dio, _secureStorage));
-
-    // 3. ERROR INTERCEPTOR (Converts errors to our custom exceptions)
-    _dio.interceptors.add(ErrorInterceptor());
-
-    // 4. LOGGING INTERCEPTOR (Logs requests/responses - dev only)
-    if (FlavorConfig.instance.flavor != Flavor.production) {
-      _dio.interceptors.add(
-        LogInterceptor(
-          request: true,
-          requestHeader: true,
-          requestBody: true,
-          responseHeader: false,
-          responseBody: true,
-          error: true,
-          logPrint: (obj) => print('🌐 DIO: $obj'),
-        ),
-      );
-    }
-
-    print('✅ Dio configured');
-    print('📍 Base URL: ${_dio.options.baseUrl}');
-    print('🎭 Mock mode: $useMockData');
-    print('🔧 Flavor: ${FlavorConfig.instance.flavor.name}');
+    // Interceptors are configured in injection.dart — don't add them here
   }
 
   /// Reconfigure Dio (useful for changing base URL or settings at runtime)

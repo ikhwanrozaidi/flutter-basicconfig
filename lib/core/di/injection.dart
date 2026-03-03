@@ -6,6 +6,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
 import 'package:injectable/injectable.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
+import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/auth/presentation/bloc/auth_event.dart';
 import '../../mocks/mock_interceptor.dart';
 import '../config/flavor_config.dart';
 import '../constant/app_constants.dart';
@@ -64,72 +66,39 @@ Future<void> configureDependencies() async {
 }
 
 void _configureDioInterceptors() {
-  try {
-    final dio = getIt<Dio>();
+  final dio = getIt<Dio>();
 
-    print('');
-    print('═══════════════════════════════════════');
-    print('🔧 CONFIGURING DIO INTERCEPTORS');
-    print('═══════════════════════════════════════');
-    print('🔧 Flavor: ${FlavorConfig.instance.flavor.name}');
-    print('🎭 Mock Mode: ${FlavorConfig.instance.useMockData}');
-    print('📍 Base URL: ${FlavorConfig.instance.apiBaseUrl}');
-    print('═══════════════════════════════════════');
-    print('');
+  dio.interceptors.clear();
 
-    // Clear any existing interceptors
-    dio.interceptors.clear();
-    print('🧹 Cleared existing interceptors');
-
-    // ==================== INTERCEPTOR ORDER ====================
-    // 1. MOCK INTERCEPTOR (First - intercepts requests in dev)
-    // 2. PRETTY LOGGER (Second - logs requests/responses in dev)
-    // 3. AUTH INTERCEPTOR (Third - adds tokens, handles refresh)
-    // 4. ERROR INTERCEPTOR (Last - handles errors)
-    // ===========================================================
-
-    // 1. Add Mock Interceptor (FIRST - only in development with mock enabled)
-    if (FlavorConfig.instance.useMockData) {
-      print('🎭 Adding Mock Interceptor');
-      dio.interceptors.add(MockInterceptor(useMockData: true));
-      print('✅ Mock Interceptor added');
-    }
-
-    // 2. Add pretty logging (only in debug mode) for API debug
-    if (FlavorConfig.instance.flavor != Flavor.production) {
-      print('📝 Adding Pretty Logger');
-      dio.interceptors.add(
-        PrettyDioLogger(
-          requestHeader: true,
-          requestBody: true,
-          responseBody: true,
-          responseHeader: false,
-          error: true,
-          compact: true,
-          maxWidth: 90,
-        ),
-      );
-      print('✅ Pretty Logger added');
-    }
-
-    // 3. Add auth interceptor
-    print('🔐 Adding Auth Interceptor');
-    dio.interceptors.add(getIt<AuthInterceptor>());
-    print('✅ Auth Interceptor added');
-
-    // 4. Add error handling interceptor
-    print('❌ Adding Error Interceptor');
-    dio.interceptors.add(getIt<ErrorInterceptor>());
-    print('✅ Error Interceptor added');
-
-    print('');
-    print('✅ Dio interceptors configured successfully');
-    print('📊 Total interceptors: ${dio.interceptors.length}');
-    print('');
-  } catch (e) {
-    print('❌ Error configuring Dio interceptors: $e');
-    rethrow;
+  if (FlavorConfig.instance.useMockData) {
+    dio.interceptors.add(MockInterceptor(useMockData: true));
   }
+
+  if (FlavorConfig.instance.flavor != Flavor.production) {
+    dio.interceptors.add(
+      PrettyDioLogger(
+        requestHeader: true,
+        requestBody: true,
+        responseBody: true,
+        responseHeader: false,
+        error: true,
+        compact: true,
+        maxWidth: 90,
+      ),
+    );
+  }
+
+  // Auth interceptor with force logout wired to AuthBloc
+  final authInterceptor = getIt<AuthInterceptor>();
+  authInterceptor.onForceLogout = () {
+    print('🔓 Force logout triggered from interceptor');
+    if (getIt.isRegistered<AuthBloc>()) {
+      getIt<AuthBloc>().add(const AuthEvent.logout());
+    }
+  };
+  dio.interceptors.add(authInterceptor);
+
+  dio.interceptors.add(getIt<ErrorInterceptor>());
 }
 
 @module
